@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, ChevronLeft, ChevronRight, Download, PenTool, Trash2, XCircle, Lock, Unlock, Move, Layout, RotateCw, Undo, Redo, Pencil, X, Check, ZoomIn, ZoomOut } from 'lucide-react';
+import { Upload, FileText, ChevronLeft, ChevronRight, Download, PenTool, Trash2, XCircle, Lock, Unlock, Move, Layout, RotateCw, Undo, Redo, Pencil, X, Check, ZoomIn, ZoomOut, Moon, Sun, BookOpen, Copy } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees, rgb } from 'pdf-lib';
 import { Button } from './components/Button';
@@ -30,6 +30,32 @@ export default function App() {
   const [scale, setScale] = useState(1.0);
   const [viewportDims, setViewportDims] = useState<{width: number, height: number} | null>(null);
   
+  // Dark Mode State
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check local storage or system preference
+    if (typeof window !== 'undefined') {
+        const storedTheme = localStorage.getItem('theme');
+        if (storedTheme) {
+            return storedTheme === 'dark';
+        }
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  // Apply Dark Mode Class
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
   // Thumbnails
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isGeneratingThumbnails, setIsGeneratingThumbnails] = useState(false);
@@ -53,6 +79,9 @@ export default function App() {
     isOpen: false,
     sigId: null
   });
+
+  // Download Confirmation
+  const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false);
   
   // History / Undo / Redo
   const [history, setHistory] = useState<{
@@ -797,10 +826,29 @@ export default function App() {
     setDeleteConfirm({ isOpen: false, sigId: null });
   };
 
+  const handleDuplicateSignature = (e: React.MouseEvent, sigId: string) => {
+      e.stopPropagation();
+      const originalSig = signatures.find(s => s.id === sigId);
+      if (!originalSig) return;
+
+      saveToHistory();
+
+      const newSig: SignatureElement = {
+          ...originalSig,
+          id: crypto.randomUUID(),
+          x: Math.min(originalSig.x + 2, 90), // Slight offset
+          y: Math.min(originalSig.y + 2, 90),
+      };
+
+      setSignatures(prev => [...prev, newSig]);
+      setSelectedSigId(newSig.id);
+  };
+
   // 8. Save PDF
   const handleDownload = async () => {
     if (!file || !pdfDoc) return;
     setIsProcessing(true);
+    setDownloadConfirmOpen(false);
 
     try {
         const arrayBuffer = await file.arrayBuffer();
@@ -910,41 +958,51 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col font-sans overflow-hidden">
-      <header className="bg-white border-b border-slate-200 shadow-sm shrink-0 z-30">
+    <div className="h-screen flex flex-col font-sans overflow-hidden bg-slate-100 dark:bg-slate-900 transition-colors">
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm shrink-0 z-30 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-1.5 rounded-lg">
               <FileText className="text-white w-5 h-5" />
             </div>
-            <h1 className="text-xl font-bold text-slate-800">E-sign PDF - Agent Rantau</h1>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-white">E-sign PDF - Agent Rantau</h1>
           </div>
           
-          {file && (
-              <div className="flex items-center gap-3">
-                  <Button variant="ghost" onClick={handleReset}>
-                     <XCircle className="w-4 h-4 mr-2" />
-                     Reset
-                  </Button>
-                  <Button onClick={handleDownload} disabled={isProcessing}>
-                      <Download className="w-4 h-4 mr-2" />
-                      {isProcessing ? 'Memproses...' : 'Unduh PDF'}
-                  </Button>
-              </div>
-          )}
+          <div className="flex items-center gap-3">
+              <button 
+                  onClick={toggleDarkMode}
+                  className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                  title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                  {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+
+              {file && (
+                  <>
+                      <Button variant="ghost" onClick={handleReset}>
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Reset
+                      </Button>
+                      <Button onClick={() => setDownloadConfirmOpen(true)} disabled={isProcessing}>
+                          <Download className="w-4 h-4 mr-2" />
+                          {isProcessing ? 'Memproses...' : 'Unduh PDF'}
+                      </Button>
+                  </>
+              )}
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 bg-slate-100 flex flex-col overflow-hidden">
+      <main className="flex-1 bg-slate-100 dark:bg-slate-900 flex flex-col overflow-hidden transition-colors">
         {!file ? (
             <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
                 <div className="w-full max-w-xl animate-fade-in-up">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-slate-200">
-                        <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Upload className="w-10 h-10 text-blue-600" />
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-slate-200 dark:border-slate-700 transition-colors">
+                        <div className="bg-blue-50 dark:bg-blue-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Upload className="w-10 h-10 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Unggah Dokumen PDF</h2>
-                        <p className="text-slate-500 mb-8">Pilih file PDF yang ingin Anda tanda tangani secara digital.</p>
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Unggah Dokumen PDF</h2>
+                        <p className="text-slate-500 dark:text-slate-400 mb-8">Pilih file PDF yang ingin Anda tanda tangani secara digital.</p>
                         <label className="block w-full">
                             <input 
                                 type="file" 
@@ -956,9 +1014,9 @@ export default function App() {
                                 Pilih File PDF
                             </div>
                         </label>
-                        <p className="text-xs text-slate-400 mt-4">File diproses di browser Anda. Aman & Privat.</p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          dibuat oleh <a href="https://makmurriansyah.github.io/" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-blue-500 hover:underline">Max NM</a>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">File diproses di browser Anda. Aman & Privat.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                          dibuat oleh <a href="https://makmurriansyah.github.io/" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-blue-500 dark:hover:text-blue-400 hover:underline">Max NM</a>
                         </p>
                     </div>
                 </div>
@@ -966,44 +1024,44 @@ export default function App() {
         ) : (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
                 {/* Top Control Bar */}
-                <div className="bg-white p-3 border-b border-slate-200 flex flex-col gap-3 shrink-0 shadow-sm z-20">
+                <div className="bg-white dark:bg-slate-800 p-3 border-b border-slate-200 dark:border-slate-700 flex flex-col gap-3 shrink-0 shadow-sm z-20 transition-colors">
                     <div className="flex flex-wrap justify-between items-center gap-4">
                         <div className="flex items-center gap-3">
-                             <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+                             <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 rounded-lg p-1 transition-colors">
                                 <button 
                                     onClick={() => setPageNum(p => Math.max(1, p - 1))}
                                     disabled={pageNum <= 1}
-                                    className="p-1.5 hover:bg-white rounded-md disabled:opacity-30 transition shadow-sm disabled:shadow-none"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-slate-600 rounded-md disabled:opacity-30 transition shadow-sm disabled:shadow-none text-slate-600 dark:text-slate-300"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
-                                <span className="text-sm font-medium px-2 min-w-[80px] text-center">
+                                <span className="text-sm font-medium px-2 min-w-[80px] text-center text-slate-700 dark:text-slate-200">
                                     Hal {pageNum} / {totalPages}
                                 </span>
                                 <button 
                                     onClick={() => setPageNum(p => Math.min(totalPages, p + 1))}
                                     disabled={pageNum >= totalPages}
-                                    className="p-1.5 hover:bg-white rounded-md disabled:opacity-30 transition shadow-sm disabled:shadow-none"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-slate-600 rounded-md disabled:opacity-30 transition shadow-sm disabled:shadow-none text-slate-600 dark:text-slate-300"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
                             
                             {/* Zoom Controls */}
-                            <div className="flex items-center gap-2 bg-slate-100 rounded-lg p-1">
+                            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 rounded-lg p-1 transition-colors">
                                 <button 
                                     onClick={handleZoomOut}
-                                    className="p-1.5 hover:bg-white rounded-md transition shadow-sm text-slate-600"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-slate-600 rounded-md transition shadow-sm text-slate-600 dark:text-slate-300"
                                     title="Zoom Out"
                                 >
                                     <ZoomOut className="w-4 h-4" />
                                 </button>
-                                <span className="text-sm font-medium px-1 min-w-[50px] text-center text-slate-600">
+                                <span className="text-sm font-medium px-1 min-w-[50px] text-center text-slate-600 dark:text-slate-200">
                                     {Math.round(scale * 100)}%
                                 </span>
                                 <button 
                                     onClick={handleZoomIn}
-                                    className="p-1.5 hover:bg-white rounded-md transition shadow-sm text-slate-600"
+                                    className="p-1.5 hover:bg-white dark:hover:bg-slate-600 rounded-md transition shadow-sm text-slate-600 dark:text-slate-300"
                                     title="Zoom In"
                                 >
                                     <ZoomIn className="w-4 h-4" />
@@ -1013,12 +1071,12 @@ export default function App() {
 
 
                         <div className="flex gap-2 items-center">
-                            <div className="flex bg-slate-100 p-1 rounded-lg mr-2">
+                            <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg mr-2 transition-colors">
                             <button 
                                 onClick={undo}
                                 disabled={history.past.length === 0}
                                 title="Undo (Ctrl+Z)"
-                                className="p-2 text-slate-600 hover:bg-white rounded shadow-sm disabled:opacity-30 disabled:shadow-none disabled:bg-transparent transition"
+                                className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 rounded shadow-sm disabled:opacity-30 disabled:shadow-none disabled:bg-transparent transition"
                             >
                                 <Undo className="w-4 h-4" />
                             </button>
@@ -1026,7 +1084,7 @@ export default function App() {
                                 onClick={redo}
                                 disabled={history.future.length === 0}
                                 title="Redo (Ctrl+Y)"
-                                className="p-2 text-slate-600 hover:bg-white rounded shadow-sm disabled:opacity-30 disabled:shadow-none disabled:bg-transparent transition"
+                                className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 rounded shadow-sm disabled:opacity-30 disabled:shadow-none disabled:bg-transparent transition"
                             >
                                 <Redo className="w-4 h-4" />
                             </button>
@@ -1057,42 +1115,42 @@ export default function App() {
 
                     {/* Sub Toolbar for Free Draw */}
                     {isFreeDrawMode && (
-                        <div className="flex items-center gap-4 px-2 py-1 animate-fade-in border-t border-slate-100 pt-3">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pengaturan Kuas:</span>
+                        <div className="flex items-center gap-4 px-2 py-1 animate-fade-in border-t border-slate-100 dark:border-slate-700 pt-3">
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pengaturan Kuas:</span>
                             
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-600">Warna:</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-300">Warna:</span>
                                 <div className="flex gap-1">
                                     {['#000000', '#2563eb', '#dc2626', '#059669'].map(c => (
                                         <button
                                             key={c}
                                             onClick={() => setBrushColor(c)}
-                                            className={`w-6 h-6 rounded-full border border-slate-200 transition-transform ${brushColor === c ? 'scale-125 ring-2 ring-blue-300' : 'hover:scale-110'}`}
+                                            className={`w-6 h-6 rounded-full border border-slate-200 dark:border-slate-600 transition-transform ${brushColor === c ? 'scale-125 ring-2 ring-blue-300' : 'hover:scale-110'}`}
                                             style={{ backgroundColor: c }}
                                         />
                                     ))}
                                 </div>
                             </div>
                             
-                            <div className="w-px h-4 bg-slate-300 mx-2"></div>
+                            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2"></div>
 
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-600">Ukuran: {brushWidth}px</span>
+                                <span className="text-xs text-slate-600 dark:text-slate-300">Ukuran: {brushWidth}px</span>
                                 <input 
                                     type="range" 
                                     min="1" 
                                     max="10" 
                                     value={brushWidth} 
                                     onChange={(e) => setBrushWidth(parseInt(e.target.value))}
-                                    className="w-24 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-800"
+                                    className="w-24 h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-slate-800 dark:accent-slate-200"
                                 />
                             </div>
                             
-                             <div className="w-px h-4 bg-slate-300 mx-2"></div>
+                             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2"></div>
                              
                              <button 
                                 onClick={() => setDrawings(prev => ({...prev, [pageNum-1]: []}))}
-                                className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 px-2 py-1 hover:bg-red-50 rounded"
+                                className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium flex items-center gap-1 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                              >
                                 <Trash2 className="w-3 h-3" /> Hapus Halaman Ini
                              </button>
@@ -1103,13 +1161,13 @@ export default function App() {
                 {/* Main Content Area: Sidebar + Canvas */}
                 <div className="flex-1 flex overflow-hidden">
                     {/* Thumbnail Sidebar */}
-                    <div className="hidden md:flex flex-col w-48 bg-white border-r border-slate-200 overflow-y-auto p-4 gap-4 shrink-0">
-                        <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-2">
+                    <div className="hidden md:flex flex-col w-48 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto p-4 gap-4 shrink-0 transition-colors">
+                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
                             <Layout className="w-3 h-3" />
                             Halaman
                         </div>
                         {isGeneratingThumbnails && thumbnails.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
+                            <div className="flex flex-col items-center justify-center py-10 text-slate-400 dark:text-slate-500 gap-2">
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                                 <span className="text-xs">Memuat Pratinjau...</span>
                             </div>
@@ -1120,11 +1178,11 @@ export default function App() {
                                     onClick={() => setPageNum(index + 1)}
                                     className={`group relative cursor-pointer flex flex-col items-center gap-2 transition-all duration-200 ${pageNum === index + 1 ? 'scale-105' : 'hover:scale-102'}`}
                                 >
-                                    <div className={`relative rounded shadow-sm overflow-hidden border-2 transition-colors ${pageNum === index + 1 ? 'border-blue-500 ring-2 ring-blue-100' : 'border-transparent group-hover:border-slate-300'}`}>
-                                        <img src={thumb} alt={`Page ${index + 1}`} className="w-full h-auto object-contain bg-slate-50" />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors"></div>
+                                    <div className={`relative rounded shadow-sm overflow-hidden border-2 transition-colors ${pageNum === index + 1 ? 'border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900' : 'border-transparent group-hover:border-slate-300 dark:group-hover:border-slate-600'}`}>
+                                        <img src={thumb} alt={`Page ${index + 1}`} className="w-full h-auto object-contain bg-slate-50 dark:bg-slate-900" />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors"></div>
                                     </div>
-                                    <span className={`text-xs font-medium ${pageNum === index + 1 ? 'text-blue-600' : 'text-slate-500'}`}>
+                                    <span className={`text-xs font-medium ${pageNum === index + 1 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
                                         {index + 1}
                                     </span>
                                 </div>
@@ -1133,7 +1191,7 @@ export default function App() {
                     </div>
 
                     {/* PDF Canvas Area */}
-                    <div className="flex-1 relative bg-slate-200/50 overflow-auto flex justify-center p-4 sm:p-8">
+                    <div className="flex-1 relative bg-slate-200/50 dark:bg-slate-900 overflow-auto flex justify-center p-4 sm:p-8 transition-colors">
                         <div 
                             ref={canvasContainerRef}
                             className="relative shadow-2xl h-fit my-auto"
@@ -1240,29 +1298,37 @@ export default function App() {
 
                                             {/* Toolbar */}
                                             <div 
-                                                className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white shadow-lg rounded-lg p-1 border border-slate-100 z-30 min-w-max"
+                                                className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-1 border border-slate-100 dark:border-slate-700 z-30 min-w-max"
                                                 style={{ cursor: 'default' }}
                                                 onMouseDown={e => e.stopPropagation()}
                                             >
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); setAspectRatioLocked(!aspectRatioLocked); }}
-                                                    className={`p-1.5 rounded-md transition ${aspectRatioLocked ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                                                    className={`p-1.5 rounded-md transition ${aspectRatioLocked ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                                                     title={aspectRatioLocked ? "Rasio Terkunci" : "Rasio Tidak Terkunci"}
                                                 >
                                                     {aspectRatioLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                                                 </button>
-                                                <div className="w-px bg-slate-200 mx-0.5 h-4"></div>
-                                                <div className="flex items-center px-1 text-xs text-slate-400 select-none">
+                                                <div className="w-px bg-slate-200 dark:bg-slate-700 mx-0.5 h-4"></div>
+                                                <button
+                                                    onClick={(e) => handleDuplicateSignature(e, sig.id)}
+                                                    className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition"
+                                                    title="Duplikat"
+                                                >
+                                                    <Copy className="w-4 h-4" />
+                                                </button>
+                                                <div className="w-px bg-slate-200 dark:bg-slate-700 mx-0.5 h-4"></div>
+                                                <div className="flex items-center px-1 text-xs text-slate-400 dark:text-slate-500 select-none">
                                                     <Move className="w-3 h-3 mr-1" />
                                                     Geser
                                                 </div>
-                                                <div className="w-px bg-slate-200 mx-0.5 h-4"></div>
+                                                <div className="w-px bg-slate-200 dark:bg-slate-700 mx-0.5 h-4"></div>
                                                 <button 
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
                                                         setDeleteConfirm({ isOpen: true, sigId: sig.id }); 
                                                     }}
-                                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition"
+                                                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition"
                                                     title="Hapus"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -1299,13 +1365,13 @@ export default function App() {
         
         {deleteConfirm.isOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform scale-100 transition-all">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm p-6 transform scale-100 transition-all border border-slate-200 dark:border-slate-700">
                     <div className="text-center">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                            <Trash2 className="h-6 w-6 text-red-600" />
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900">Hapus Tanda Tangan?</h3>
-                        <p className="mt-2 text-sm text-slate-500">
+                        <h3 className="text-lg font-medium text-slate-900 dark:text-white">Hapus Tanda Tangan?</h3>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                             Tanda tangan yang dihapus dapat dikembalikan menggunakan tombol Undo (Ctrl+Z).
                         </p>
                     </div>
@@ -1323,6 +1389,49 @@ export default function App() {
                             onClick={handleConfirmDelete}
                         >
                             Hapus
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Download Confirmation Modal */}
+        {downloadConfirmOpen && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6 transform scale-100 transition-all border border-slate-200 dark:border-slate-700">
+                    <div className="text-center">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
+                            <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Konfirmasi Unduhan</h3>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                            Apakah Anda yakin ingin menyimpan dokumen ini?
+                        </p>
+                        
+                        <div className="mt-6 mb-2">
+                           <blockquote className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg border-l-4 border-blue-500 italic text-slate-700 dark:text-slate-300 text-sm leading-relaxed relative">
+                               <span className="text-2xl text-blue-300 absolute -top-2 left-2">"</span>
+                               Barangsiapa yang memudahkan urusan saudaranya, Allah akan memudahkan urusannya di dunia dan akhirat.
+                               <span className="text-2xl text-blue-300 absolute -bottom-4 right-2">"</span>
+                               <footer className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400 not-italic text-right">
+                                  — (HR. Muslim)
+                               </footer>
+                           </blockquote>
+                        </div>
+                    </div>
+                    <div className="mt-6 flex gap-3">
+                        <Button 
+                            variant="secondary" 
+                            className="flex-1 justify-center"
+                            onClick={() => setDownloadConfirmOpen(false)}
+                        >
+                            Batal
+                        </Button>
+                        <Button 
+                            className="flex-1 justify-center"
+                            onClick={handleDownload}
+                        >
+                            Unduh Sekarang
                         </Button>
                     </div>
                 </div>
