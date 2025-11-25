@@ -202,7 +202,7 @@ export default function App() {
           await page.render({
             canvasContext: context!,
             viewport: viewport
-          }).promise;
+          } as any).promise;
 
           thumbs.push(canvas.toDataURL());
         }
@@ -272,7 +272,7 @@ export default function App() {
         };
 
         // 2. Start new render task and save reference
-        const renderTask = page.render(renderContext);
+        const renderTask = page.render(renderContext as any);
         renderTaskRef.current = renderTask;
 
         await renderTask.promise;
@@ -882,6 +882,7 @@ export default function App() {
         }
 
         const pdfBytes = await pdfDocLib.save();
+        // Explicitly cast to any to avoid TypeScript complaints about SharedArrayBuffer vs ArrayBuffer compatibility
         const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
