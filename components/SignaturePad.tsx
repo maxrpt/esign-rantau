@@ -336,11 +336,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
                     {activeTab === 'draw' ? 'Area Gambar' : 'Pratinjau Tanda Tangan'}
                     </div>
                     <div className="relative shadow-sm bg-slate-50 dark:bg-slate-900 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-600 w-full hover:border-blue-300 dark:hover:border-blue-500 transition-colors">
-                        {/* We keep canvas white background typically to simulate paper, but logic above handles transparency */}
                         <canvas
                             ref={canvasRef}
                             style={{ width: '100%', height: '200px', touchAction: 'none' }}
-                            className="block rounded-xl cursor-crosshair bg-white" 
+                            className="block rounded-xl cursor-crosshair transparent-pattern" 
                             onMouseDown={startDrawing}
                             onMouseMove={draw}
                             onMouseUp={stopDrawing}
@@ -434,7 +433,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
           {activeTab === 'upload' && (
             <div className="w-full flex flex-col items-center gap-4 animate-fade-in">
                 <div 
-                    className="w-full h-[240px] bg-slate-50 dark:bg-slate-900 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group"
+                    className={`w-full h-[240px] rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group ${uploadedImage ? 'transparent-pattern' : 'bg-slate-50 dark:bg-slate-900'}`}
                     onClick={() => fileInputRef.current?.click()}
                 >
                     {uploadedImage ? (
