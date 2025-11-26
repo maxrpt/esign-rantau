@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, ChevronLeft, ChevronRight, Download, PenTool, Trash2, XCircle, Lock, Unlock, Move, Layout, RotateCw, Undo, Redo, Pencil, X, Check, ZoomIn, ZoomOut, Moon, Sun, Heart } from 'lucide-react';
+import { Upload, FileText, ChevronLeft, ChevronRight, Download, PenTool, Trash2, XCircle, Lock, Unlock, Move, Layout, RotateCw, Undo, Redo, Pencil, X, Check, ZoomIn, ZoomOut, Moon, Sun, BookOpen, Copy } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees, rgb } from 'pdf-lib';
 import { Button } from './components/Button';
@@ -452,6 +452,14 @@ export default function App() {
     }
   };
 
+  const handleClearPage = () => {
+    saveToHistory();
+    setDrawings(prev => ({
+      ...prev,
+      [pageNum - 1]: []
+    }));
+  };
+
   // 5. Handle Dragging with Snapping
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
     if (isFreeDrawMode) return; // Disable dragging in draw mode
@@ -826,6 +834,25 @@ export default function App() {
     setDeleteConfirm({ isOpen: false, sigId: null });
   };
 
+  // Duplicate Signature Handler
+  const handleDuplicateSignature = (e: React.MouseEvent, sigId: string) => {
+      e.stopPropagation();
+      const originalSig = signatures.find(s => s.id === sigId);
+      if (!originalSig) return;
+
+      saveToHistory();
+
+      const newSig: SignatureElement = {
+          ...originalSig,
+          id: crypto.randomUUID(),
+          x: Math.min(originalSig.x + 2, 90), // Slight offset
+          y: Math.min(originalSig.y + 2, 90),
+      };
+
+      setSignatures(prev => [...prev, newSig]);
+      setSelectedSigId(newSig.id);
+  };
+
   // 8. Save PDF
   const handleDownload = async () => {
     if (!file || !pdfDoc) return;
@@ -1130,8 +1157,30 @@ export default function App() {
                             
                              <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2"></div>
                              
+                             {/* Undo/Redo for Draw Mode */}
+                             <div className="flex items-center gap-1">
+                                 <button 
+                                    onClick={undo}
+                                    disabled={history.past.length === 0}
+                                    className="p-1 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 disabled:opacity-30 transition"
+                                    title="Undo"
+                                 >
+                                     <Undo className="w-4 h-4" />
+                                 </button>
+                                 <button 
+                                    onClick={redo}
+                                    disabled={history.future.length === 0}
+                                    className="p-1 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 disabled:opacity-30 transition"
+                                    title="Redo"
+                                 >
+                                     <Redo className="w-4 h-4" />
+                                 </button>
+                             </div>
+
+                             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2"></div>
+
                              <button 
-                                onClick={() => setDrawings(prev => ({...prev, [pageNum-1]: []}))}
+                                onClick={handleClearPage}
                                 className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium flex items-center gap-1 px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                              >
                                 <Trash2 className="w-3 h-3" /> Hapus Halaman Ini
@@ -1292,6 +1341,14 @@ export default function App() {
                                                     {aspectRatioLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                                                 </button>
                                                 <div className="w-px bg-slate-200 dark:bg-slate-700 mx-0.5 h-4"></div>
+                                                <button
+                                                    onClick={(e) => handleDuplicateSignature(e, sig.id)}
+                                                    className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition"
+                                                    title="Duplikat"
+                                                >
+                                                    <Copy className="w-4 h-4" />
+                                                </button>
+                                                <div className="w-px bg-slate-200 dark:bg-slate-700 mx-0.5 h-4"></div>
                                                 <div className="flex items-center px-1 text-xs text-slate-400 dark:text-slate-500 select-none">
                                                     <Move className="w-3 h-3 mr-1" />
                                                     Geser
@@ -1375,7 +1432,7 @@ export default function App() {
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6 transform scale-100 transition-all border border-slate-200 dark:border-slate-700">
                     <div className="text-center">
                         <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
-                            <Heart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Konfirmasi Unduhan</h3>
                         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
