@@ -100,7 +100,7 @@ export const SignatureStyling: React.FC<SignatureStylingProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in flex flex-col transition-colors">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
@@ -115,7 +115,7 @@ export const SignatureStyling: React.FC<SignatureStylingProps> = ({
 
         <div className="p-6 flex flex-col gap-6">
           {/* Preview */}
-          <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600 flex items-center justify-center min-h-[160px] bg-[url('https://www.transparenttextures.com/patterns/grid-noise.png')]">
+          <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600 flex items-center justify-center min-h-[160px] transparent-pattern">
             <img 
               src={previewUrl} 
               alt="Signature Preview" 
