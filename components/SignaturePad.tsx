@@ -139,9 +139,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
     }
   }, [activeTab, textInput, selectedFont, selectedColor]);
 
-  // Update color logic (Draw mode only for existing strokes tinting is complex, usually just new strokes)
-  // But we want to preserve path if we could. For simplicity, color change in Draw mode only affects NEW strokes unless we implement history.
-  // However, specifically for the background fill trick in `useEffect` below:
+  // Update color logic 
   useEffect(() => {
     if (activeTab === 'draw') {
         const ctx = ctxRef.current;
@@ -213,12 +211,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         
-        // Simple threshold to remove white background
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            // If it's close to white (light gray to white)
             if (r > 240 && g > 240 && b > 240) {
                 data[i + 3] = 0; // Set alpha to 0
             }
@@ -239,7 +235,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
       const reader = new FileReader();
       reader.onload = async (event) => {
         const result = event.target?.result as string;
-        // Basic normalization to PNG
         const img = new Image();
         img.onload = async () => {
            const tempCanvas = document.createElement('canvas');
@@ -250,7 +245,6 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
              ctx.drawImage(img, 0, 0);
              let finalDataUrl = tempCanvas.toDataURL('image/png');
              
-             // Auto remove bg if enabled
              if (autoRemoveBg) {
                  finalDataUrl = await removeBackground(finalDataUrl);
              }
@@ -333,7 +327,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
           {/* DRAW & TYPE SHARED CANVAS */}
           {(activeTab === 'draw' || activeTab === 'type') && (
             <>
-                <div className="relative w-full shrink-0">
+                <div className="relative w-full shrink-0 mt-2">
                     <div className="absolute -top-3 left-4 bg-white dark:bg-slate-800 px-2 text-xs font-medium text-slate-400 z-10">
                     {activeTab === 'draw' ? 'Area Gambar' : 'Pratinjau Tanda Tangan'}
                     </div>
@@ -407,7 +401,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
                 {/* Shared Color Picker */}
                 <div className="flex flex-col items-center gap-3 w-full shrink-0">
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Pilih Warna Tinta</span>
-                    <div className="flex gap-4 p-2 bg-slate-50 dark:bg-slate-900 rounded-full border border-slate-100 dark:border-slate-700">
+                    <div className="flex flex-wrap justify-center gap-4 p-2 bg-slate-50 dark:bg-slate-900 rounded-full border border-slate-100 dark:border-slate-700">
                         {COLORS.map((color) => (
                         <button
                             key={color.value}
