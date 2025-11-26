@@ -59,8 +59,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
     const rect = canvas.getBoundingClientRect();
     
     // Set display size (css pixels)
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    if (rect.width > 0 && rect.height > 0) {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+    }
     
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (ctx) {
@@ -279,7 +281,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, is
   const isSaveDisabled = activeTab === 'upload' ? !uploadedImage : isEmpty;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in flex flex-col max-h-[90vh] transition-colors">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900 shrink-0">
