@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, ChevronLeft, ChevronRight, Download, PenTool, Trash2, XCircle, Lock, Unlock, Move, Layout, RotateCw, Undo, Redo, Pencil, X, Check, ZoomIn, ZoomOut, Moon, Sun, BookOpen, Copy } from 'lucide-react';
+import { Upload, FileText, ChevronLeft, ChevronRight, Download, PenTool, Trash2, XCircle, Lock, Unlock, Move, Layout, RotateCw, Undo, Redo, Pencil, X, Check, ZoomIn, ZoomOut, Moon, Sun, BookOpen, Copy, Image as ImageIcon } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, degrees, rgb } from 'pdf-lib';
 import { Button } from './components/Button';
@@ -956,6 +956,103 @@ export default function App() {
     }
   };
 
+  // 9. Export Current Page As Image
+  const handleExportPageAsImage = async () => {
+    if (!pdfDoc) return;
+    setIsProcessing(true);
+
+    try {
+        const page = await pdfDoc.getPage(pageNum);
+        // Render at high resolution (e.g. scale 2.0) for quality
+        const exportScale = 2.0;
+        const viewport = page.getViewport({ scale: exportScale });
+        
+        // Create off-screen canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) throw new Error("Could not create canvas context");
+
+        // 1. Render PDF Page
+        await page.render({
+            canvasContext: ctx,
+            viewport: viewport
+        } as any).promise;
+
+        // 2. Draw Strokes (Free Draw)
+        const pageStrokes = drawings[pageNum - 1] || [];
+        if (pageStrokes.length > 0) {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            pageStrokes.forEach(stroke => {
+                if (stroke.points.length < 2) return;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = stroke.color;
+                ctx.lineWidth = stroke.width * exportScale; // Scale line width
+
+                const first = stroke.points[0];
+                ctx.moveTo(first.x * viewport.width, first.y * viewport.height);
+
+                for (let i = 1; i < stroke.points.length; i++) {
+                    const p = stroke.points[i];
+                    ctx.lineTo(p.x * viewport.width, p.y * viewport.height);
+                }
+                ctx.stroke();
+            });
+        }
+
+        // 3. Draw Signatures
+        const pageSignatures = signatures.filter(s => s.pageIndex === pageNum - 1);
+        for (const sig of pageSignatures) {
+            await new Promise<void>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    const width = (sig.width / 100) * viewport.width;
+                    const height = width / sig.aspectRatio;
+                    const x = (sig.x / 100) * viewport.width;
+                    const y = (sig.y / 100) * viewport.height;
+
+                    ctx.save();
+                    
+                    // Handle Rotation & Opacity
+                    ctx.globalAlpha = sig.opacity ?? 1;
+                    
+                    const cx = x + width / 2;
+                    const cy = y + height / 2;
+                    
+                    ctx.translate(cx, cy);
+                    ctx.rotate((sig.rotation * Math.PI) / 180);
+                    ctx.translate(-cx, -cy);
+                    
+                    ctx.drawImage(img, x, y, width, height);
+                    
+                    ctx.restore();
+                    resolve();
+                };
+                img.src = sig.dataUrl;
+            });
+        }
+
+        // Export
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `page_${pageNum}_${file?.name.replace('.pdf', '') || 'export'}.png`;
+        link.click();
+
+    } catch (e) {
+        console.error("Export error", e);
+        alert("Gagal mengekspor gambar. Silakan coba lagi.");
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
   const handleReset = () => {
       setFile(null);
       setPdfDoc(null);
@@ -988,6 +1085,10 @@ export default function App() {
 
               {file && (
                   <>
+                      <Button variant="ghost" onClick={handleExportPageAsImage} disabled={isProcessing}>
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        Export Img
+                      </Button>
                       <Button variant="ghost" onClick={handleReset}>
                         <XCircle className="w-4 h-4 mr-2" />
                         Reset
@@ -1370,57 +1471,6 @@ export default function App() {
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {showStylingModal && editingSigId && (
-            <SignatureStyling
-                initialDataUrl={signatures.find(s => s.id === editingSigId)?.dataUrl || ''}
-                initialOpacity={signatures.find(s => s.id === editingSigId)?.opacity ?? 1}
-                onSave={handleSaveStyle}
-                onCancel={handleCancelSignature}
-                onRedraw={handleRedrawRequest}
-            />
-        )}
-
-        {showSigPad && (
-            <SignaturePad 
-                onSave={handleSaveSignature} 
-                onCancel={handleCancelSignature}
-                isEditing={!!editingSigId} 
-                initialDataUrl={editingSigId ? signatures.find(s => s.id === editingSigId)?.dataUrl : undefined}
-            />
-        )}
-        
-        {deleteConfirm.isOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm p-6 transform scale-100 transition-all border border-slate-200 dark:border-slate-700">
-                    <div className="text-center">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-                            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
-                        </div>
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white">Hapus Tanda Tangan?</h3>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                            Tanda tangan yang dihapus dapat dikembalikan menggunakan tombol Undo (Ctrl+Z).
-                        </p>
-                    </div>
-                    <div className="mt-6 flex gap-3">
-                        <Button 
-                            variant="secondary" 
-                            className="flex-1 justify-center"
-                            onClick={() => setDeleteConfirm({ isOpen: false, sigId: null })}
-                        >
-                            Batal
-                        </Button>
-                        <Button 
-                            variant="danger" 
-                            className="flex-1 justify-center"
-                            onClick={handleConfirmDelete}
-                        >
-                            Hapus
-                        </Button>
                     </div>
                 </div>
             </div>
