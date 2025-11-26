@@ -1087,11 +1087,11 @@ export default function App() {
                   <>
                       <Button variant="ghost" onClick={handleExportPageAsImage} disabled={isProcessing}>
                         <ImageIcon className="w-4 h-4 mr-2" />
-                        Export Img
+                        <span className="hidden sm:inline">Export Img</span>
                       </Button>
                       <Button variant="ghost" onClick={handleReset}>
                         <XCircle className="w-4 h-4 mr-2" />
-                        Reset
+                        <span className="hidden sm:inline">Reset</span>
                       </Button>
                       <Button onClick={() => setDownloadConfirmOpen(true)} disabled={isProcessing}>
                           <Download className="w-4 h-4 mr-2" />
@@ -1218,7 +1218,8 @@ export default function App() {
 
                             <Button onClick={() => setShowSigPad(true)} disabled={isFreeDrawMode}>
                                 <PenTool className="w-4 h-4 mr-2" />
-                                Tanda Tangan
+                                <span className="hidden sm:inline">Tanda Tangan</span>
+                                <span className="sm:hidden">Sign</span>
                             </Button>
                         </div>
                     </div>
@@ -1372,7 +1373,7 @@ export default function App() {
                                         }
                                     }}
                                     onDoubleClick={(e) => handleDoubleClick(e, sig.id)}
-                                    className={`absolute group select-none ${selectedSigId === sig.id ? 'z-20' : 'z-0'} ${isFreeDrawMode ? 'pointer-events-none' : ''}`}
+                                    className={`absolute group select-none ${selectedSigId === sig.id ? 'z-30' : 'z-10'} ${isFreeDrawMode ? 'pointer-events-none' : ''}`}
                                     style={{
                                         left: `${sig.x}%`,
                                         top: `${sig.y}%`,
@@ -1430,7 +1431,7 @@ export default function App() {
 
                                             {/* Toolbar */}
                                             <div 
-                                                className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-1 border border-slate-100 dark:border-slate-700 z-30 min-w-max"
+                                                className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white dark:bg-slate-800 shadow-lg rounded-lg p-1 border border-slate-100 dark:border-slate-700 z-50 min-w-max"
                                                 style={{ cursor: 'default' }}
                                                 onMouseDown={e => e.stopPropagation()}
                                             >
